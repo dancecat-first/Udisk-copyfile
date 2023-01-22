@@ -203,8 +203,6 @@ void copyFile(const TCHAR* dirName)
 		{
 			return;
 		}
-
-		DWORD dw = GetLastError();
 	}
 
 	while (_findnext(file, &find) == 0)
@@ -226,8 +224,6 @@ void copyFile(const TCHAR* dirName)
 					return;
 				}
 			}
-
-			DWORD dw = GetLastError();
 	}
 	_findclose(file);
 
